@@ -57,8 +57,6 @@ jobs:
             done
             params+=("-F 'query=@.github/api/commit.gql'")
             gh api graphql "${params[@]}"
-            git add -A
-            git commit -m 'docs(github-action): update documentation'
           fi
 permissions:
   contents: write
