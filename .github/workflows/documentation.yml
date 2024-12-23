@@ -41,8 +41,6 @@ jobs:
             params+=("-F oid='${{ github.event.pull_request.head.sha }}'")
             params+=("-F message='docs(github-action): update documentation'")
             mapfile -t clips < <(git ls-files -d --deduplicate)
-            echo 'Validating the modified files'
-            git ls-files -om --deduplicate
             mapfile -t files < <(git ls-files -om --deduplicate)
             for file in "${files[@]}"; do
               type='addition'
