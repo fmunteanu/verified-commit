@@ -38,7 +38,7 @@ jobs:
             declare -a params
             params+=("-F repository='${{ github.repository }}'")
             params+=("-F branchName='${{ github.head_ref }}'")
-            params+=("-F oid='${{ github.sha }}'")
+            params+=("-F oid='${{ github.event.pull_request.head.sha }}'")
             params+=("-F message='docs(github-action): update documentation'")
             mapfile -t clips < <(git ls-files -d --deduplicate)
             echo 'Validating the modified files'
