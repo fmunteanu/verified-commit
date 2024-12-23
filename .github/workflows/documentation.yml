@@ -52,7 +52,7 @@ jobs:
                 fi
               done
               params+=("-F fileChanges[type]='$type'")
-              params+=("-F fileChange[path]='$file'")
+              params+=("-F fileChanges[path]='$file'")
               if [ "$type" == 'addition' ]; then
                 params+=("-F fileChanges[contents]='$(base64 -w 0 $file)'")
               fi
