@@ -59,6 +59,7 @@ jobs:
             done
             params+=("-F 'query=@.github/api/commit.gql'")
             gh api graphql "${params[@]}"
+            git push origin ${{ github.head_ref }}
           fi
 permissions:
   contents: write
