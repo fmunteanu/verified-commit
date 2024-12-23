@@ -59,6 +59,4 @@ jobs:
             gh api graphql "${params[@]}"
           fi
 permissions:
-  checks: write
   contents: write
-  statuses: write
