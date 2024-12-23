@@ -51,10 +51,13 @@ jobs:
                   type='deletion'
                 fi
               done
-              params+=("-F fileChanges[][type]='$type'")
-              params+=("-F fileChanges[][path]='$file'")
               if [ "$type" == 'addition' ]; then
-                params+=("-F fileChanges[][contents]='$(base64 -w 0 $file)'")
+                params+=("-F fileChanges[additions][type]='$type'")
+                params+=("-F fileChanges[additions][path]='$file'")
+                params+=("-F fileChanges[additions][contents]='$(base64 -w 0 $file)'")
+              else
+                params+=("-F fileChanges[deletions][type]='$type'")
+                params+=("-F fileChanges[deletions][path]='$file'")
               fi
             done
             params+=("-F 'query=@.github/api/commit.gql'")
