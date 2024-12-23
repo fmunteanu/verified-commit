@@ -17,7 +17,7 @@ mutation (
     fileChanges: $fileChanges
   }) {
     commit {
-      url
+      oid
     }
   }
 }
