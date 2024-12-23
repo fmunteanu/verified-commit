@@ -60,3 +60,4 @@ jobs:
           fi
 permissions:
   contents: write
+  statuses: write
