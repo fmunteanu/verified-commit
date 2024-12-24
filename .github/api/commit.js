@@ -1,4 +1,4 @@
-const { request } = import("@octokit/request");
+const { request } = require("@octokit/request");
 const fs = require("fs");
 const path = require("path");
 
