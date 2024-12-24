@@ -35,9 +35,9 @@ jobs:
           git switch ${{ github.head_ref }}
           helm-docs --values-file=./defaults/main.yaml
           if [ -n "$(git ls-files -om --deduplicate)" ]; then
-            echo "::set-output name=files::$(git ls-files -om --deduplicate | jq -Rsc 'split("\n")[:-1]')"
+            echo "files=$(git ls-files -om --deduplicate | jq -Rsc 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
           else
-            echo "::set-output name=files::[]"
+            echo "files=[]" >> $GITHUB_OUTPUT
           fi
       - name: Commit changes
         env:
