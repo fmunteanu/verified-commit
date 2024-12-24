@@ -44,10 +44,10 @@ jobs:
                   type='deletion'
                 fi
               done
-              changes+=(fileChanges[][file][type]="$type")
-              changes+=(fileChanges[][file][path]="$file")
+              changes+=([][file][type]="$type")
+              changes+=([][file][path]="$file")
               if [ "$type" == 'addition' ]; then
-                changes+=(fileChanges[][file][contents]="$(base64 -w 0 $file)")
+                changes+=([][file][contents]="$(base64 -w 0 $file)")
               fi
             done
             branch='${{ github.head_ref }}'
