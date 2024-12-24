@@ -18,8 +18,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Setup node
-        uses: actions/setup-node@v4
       - name: Install required packages
         env:
           HELM_DOCS_URL: https://github.com/norwoodj/helm-docs/releases/download
@@ -27,6 +25,7 @@ jobs:
         run: |
           sudo wget -qP /tmp $HELM_DOCS_URL/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.deb
           sudo apt-get -y install jq /tmp/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.deb
+          npm install @octokit/request
       - name: Update documentation
         id: update
         run: |
