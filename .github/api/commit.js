@@ -1,6 +1,6 @@
-const { request } = require("@octokit/request");
-const fs = require("fs");
-const path = require("path");
+import { request } from "@octokit/request";
+import { fs } from "fs";
+import { path } from "path";
 
 (async () => {
   const filesJson = process.argv.slice(2);
