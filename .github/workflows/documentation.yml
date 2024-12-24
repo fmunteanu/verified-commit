@@ -18,16 +18,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Install package
+      - name: Install required packages
         env:
           HELM_DOCS_URL: https://github.com/norwoodj/helm-docs/releases/download
           HELM_DOCS_VERSION: 1.14.2
         run: |
           sudo wget -qP /tmp $HELM_DOCS_URL/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.deb
-          sudo apt-get -y install /tmp/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.deb
+          sudo apt-get -y install jq /tmp/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.deb
       - name: Update documentation
-        env:
-          GH_TOKEN: ${{ github.token }}
+        id: update
         run: |
           git config user.email '${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com'
           git config user.name '${{ github.actor }}'
@@ -35,29 +34,16 @@ jobs:
           git switch ${{ github.head_ref }}
           helm-docs --values-file=./defaults/main.yaml
           if [ -n "$(git ls-files -om --deduplicate)" ]; then
-            declare -a params
-            params+=("-F repository='${{ github.repository }}'")
-            params+=("-F branchName='${{ github.head_ref }}'")
-            params+=("-F oid='${{ github.event.pull_request.head.sha }}'")
-            params+=("-F message='docs(github-action): update documentation'")
-            mapfile -t clips < <(git ls-files -d --deduplicate)
-            mapfile -t files < <(git ls-files -om --deduplicate)
-            for file in "${files[@]}"; do
-              type='addition'
-              for clip in "${clips[@]}"; do
-                if [ "$clip" == "$file" ]; then
-                  type='deletion'
-                fi
-              done
-              params+=("-F fileChanges[][file][type]='$type'")
-              params+=("-F fileChanges[][file][path]='$file'")
-              if [ "$type" == 'addition' ]; then
-                params+=("-F fileChanges[][file][contents]='$(base64 -w 0 $file)'")
-              fi
-            done
-            params+=("-F 'query=@.github/api/commit.gql'")
-            echo "${params[@]}"
-            gh api graphql "${params[@]}"
+            echo "::set-output name=files::$(git ls-files -om --deduplicate | jq -Rsc 'split("\n")[:-1]')"
+          else
+            echo "::set-output name=files::[]"
           fi
+      - name: Commit changes
+        env:
+          GITHUB_BRANCH_NAME: ${{ github.head_ref }}
+          GITHUB_COMMIT_MESSAGE: 'docs(github-action): update documentation'
+          GITHUB_TOKEN: ${{ github.token }}
+        if: steps.update.outputs.files != '[]'
+        run: node .github/api/commit.js "${{ steps.update.outputs.files }}"
 permissions:
   contents: write
