@@ -1,23 +1,30 @@
 name: Update Documentation
+
+permissions: read
+
 on:
   pull_request:
     paths:
       - 'roles/*/defaults/main.yaml'
       - 'roles/*/Chart.yaml'
       - 'roles/*/README.md.gotmpl'
+
 concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow }}-${{ github.ref }}
+
 defaults:
   run:
     shell: bash
+
 jobs:
   build:
     name: Build Documentation
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Install required packages
         env:
           HELM_DOCS_URL: https://github.com/norwoodj/helm-docs/releases/download
@@ -25,13 +32,15 @@ jobs:
         run: |
           sudo wget -qP /tmp $HELM_DOCS_URL/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.deb
           sudo apt-get -y install /tmp/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.deb
+
       - name: Update documentation
         run: |
-          git config user.email '${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com'
-          git config user.name '${{ github.actor }}'
-          git fetch
-          git switch ${{ github.head_ref }}
-          helm-docs --values-file=./defaults/main.yaml
+            git config user.email '${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com'
+            git config user.name '${{ github.actor }}'
+            git fetch
+            git switch ${{ github.head_ref }}
+            helm-docs --values-file=./defaults/main.yaml
+
       - name: Get modified files
         id: update
         uses: actions/github-script@v7
@@ -66,7 +75,6 @@ jobs:
                   headRefOid: context.pull_request.head.sha 
                 };
                 const response = await github.graphql(query, variables);
-
                 const modifiedFiles = [];
                 const newFiles = [];
                 response.data.repository.object.tree.entries.forEach(entry => {
@@ -85,5 +93,13 @@ jobs:
             console.log('New Files:', newFiles);
             core.setOutput('modifiedFiles', JSON.stringify(modifiedFiles));
             core.setOutput('newFiles', JSON.stringify(newFiles));
-permissions:
-  contents: write
+
+      - name: Log Modified Files (for debugging) 
+        run: |
+          echo "Modified Files:"
+          echo "${{ steps.update.outputs.modifiedFiles }}"
+
+      - name: Log New Files (for debugging) 
+        run: |
+          echo "New Files:"
+          echo "${{ steps.update.outputs.newFiles }}" 
