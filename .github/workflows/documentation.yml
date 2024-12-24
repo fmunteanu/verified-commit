@@ -55,7 +55,8 @@ jobs:
                 params+=("-F fileChanges[][file][contents]='$(base64 -w 0 $file)'")
               fi
             done
-            params+=("-F 'query=@.github/api/commit.gql'")
+            params+=("-F 'query=@commit.gql'")
+            cd .github/api
             gh api graphql "${params[@]}"
           fi
 permissions:
