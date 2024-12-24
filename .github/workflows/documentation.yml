@@ -1,6 +1,7 @@
 name: Update Documentation
 
-permissions: read
+permissions:
+  contents: write
 
 on:
   pull_request:
