@@ -38,20 +38,22 @@ jobs:
         with:
           script: |
             async function getModifiedFiles() {
-              const { data: { repository: { id } } } = await github.rest.repos.get({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-              });
-              const query = `
-                query($repositoryId: ID!, $headRefOid: String!) {
-                  repository(id: $repositoryId) {
-                    object(oid: $headRefOid) {
-                      ... on Commit {
-                        message
-                        tree {
-                          entries {
-                            type
-                            path
+              try {
+                const { data: { repository: { id } } } = await github.rest.repos.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                });
+                const query = `
+                  query($repositoryId: ID!, $headRefOid: String!) {
+                    repository(id: $repositoryId) {
+                      object(oid: $headRefOid) {
+                        ... on Commit {
+                          message
+                          tree {
+                            entries {
+                              type
+                              path
+                            }
                           }
                         }
                       }
@@ -59,19 +61,24 @@ jobs:
                   }
                 }
               `;
-              const variables = { 
-                repositoryId: id, 
-                headRefOid: context.pull_request.head.sha 
-              };
-              const response = await github.graphql(query, variables);
-              const modifiedFiles = [];
-              const newFiles = [];
-              response.data.repository.object.tree.entries.forEach(entry => {
-                if (entry.type === 'blob') {
-                  modifiedFiles.push(entry.path); 
-                }
-              });
-              return { modifiedFiles, newFiles };
+                const variables = { 
+                  repositoryId: id, 
+                  headRefOid: context.pull_request.head.sha 
+                };
+                const response = await github.graphql(query, variables);
+
+                const modifiedFiles = [];
+                const newFiles = [];
+                response.data.repository.object.tree.entries.forEach(entry => {
+                  if (entry.type === 'blob') {
+                    modifiedFiles.push(entry.path); 
+                  }
+                });
+                return { modifiedFiles, newFiles };
+              } catch (error) {
+                console.error('Error fetching repository data:', error);
+                return { modifiedFiles: [], newFiles: [] }; 
+              }
             }
             const { modifiedFiles, newFiles } = await getModifiedFiles();
             console.log('Modified Files:', modifiedFiles);
