@@ -56,6 +56,7 @@ jobs:
               fi
             done
             params+=("-F 'query=@.github/api/commit.gql'")
+            echo "${params[@]}" | tr ' -F' '\n    -F'
             gh api graphql "${params[@]}"
           fi
 permissions:
