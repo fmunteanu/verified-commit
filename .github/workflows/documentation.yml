@@ -54,7 +54,7 @@ jobs:
             done
           fi
       - name: Update documentation
-        uses: octokit/graphql-action@v2
+        uses: octokit/graphql-action@v2.3.2
         with:
           query: |
             mutation(
