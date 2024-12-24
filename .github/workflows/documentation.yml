@@ -44,13 +44,14 @@ jobs:
                   type='deletion'
                 fi
               done
-              changes[][file][type]="$type"
-              changes[][file][path]="$file"
+              changes+=([file][type]="$type")
+              changes+=([file][path]="$file")
               if [ "$type" == 'addition' ]; then
-                changes[][file][contents]="$(base64 -w 0 $file)"
+                changes+=([file][contents]="$(base64 -w 0 $file)")
               fi
             done
             branch='${{ github.head_ref }}'
+            echo "${changes[@]}"
             fileChanges="${changes[@]}"
             oid='${{ github.event.pull_request.head.sha }}'
           fi
