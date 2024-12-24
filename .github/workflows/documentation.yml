@@ -33,10 +33,8 @@ jobs:
           git fetch
           git switch ${{ github.head_ref }}
           helm-docs --values-file=./defaults/main.yaml
+          declare -a changes
           if [ -n "$(git ls-files -om --deduplicate)" ]; then
-            branch='${{ github.head_ref }}'
-            oid='${{ github.event.pull_request.head.sha }}'
-            declare -a changes
             mapfile -t clips < <(git ls-files -d --deduplicate)
             mapfile -t files < <(git ls-files -om --deduplicate)
             for file in "${files[@]}"; do
@@ -52,9 +50,12 @@ jobs:
                 changes[][file][contents]="$(base64 -w 0 $file)"
               fi
             done
+            branch='${{ github.head_ref }}'
+            fileChanges="${changes[@]}"
+            oid='${{ github.event.pull_request.head.sha }}'
           fi
       - name: Update documentation
-        uses: octokit/graphql-action@v2.3.2
+        uses: octokit/graphql-action@v2.x
         with:
           query: |
             mutation(
@@ -80,11 +81,12 @@ jobs:
                 }
               }
             }
-          token: ${{ github.token }}
-          repository: ${{ github.repository }}
-          branchName: ${{ steps.files.outputs.branch }}
-          oid: ${{ steps.files.outputs.oid }}
-          message: 'docs(github-action): update documentation'
-          fileChanges: ${{ steps.files.outputs.changes }}
+          variables: |
+            token: ${{ github.token }}
+            repository: ${{ github.repository }}
+            branchName: ${{ steps.files.outputs.branch }}
+            oid: ${{ steps.files.outputs.oid }}
+            message: 'docs(github-action): update documentation'
+            fileChanges: ${{ steps.files.outputs.fileChanges }}
 permissions:
   contents: write
