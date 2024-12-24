@@ -18,24 +18,18 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Install required packages
-        env:
-          HELM_DOCS_URL: https://github.com/norwoodj/helm-docs/releases/download
-          HELM_DOCS_VERSION: 1.14.2
-        run: |
-          sudo wget -qP /tmp $HELM_DOCS_URL/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.deb
-          sudo apt-get -y install /tmp/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.deb
       - name: Update documentation
+        run: |
+          git config user.email '${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com'
+          git config user.name '${{ github.actor }}'
+          git fetch
+          git switch ${{ github.head_ref }}
+          helm-docs --values-file=./defaults/main.yaml
+      - name: Get modified files
         id: update
         uses: actions/github-script@v7
         with:
           script: |
-            const { exec } = require('@actions/exec');
-            await exec('git', ['config', '--local', 'user.email', '${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com']);
-            await exec('git', ['config', '--local', 'user.name', '${{ github.actor }}']);
-            await exec('git', ['fetch']);
-            await exec('git', ['switch', '${{ github.head_ref }}']);
-            await exec('helm-docs', ['--values-file=./defaults/main.yaml']);
             const { context, Octokit } = require('@actions/github');
             const github = new Octokit();
             async function getModifiedFiles() {
