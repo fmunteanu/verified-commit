@@ -24,27 +24,114 @@ jobs:
           HELM_DOCS_VERSION: 1.14.2
         run: |
           sudo wget -qP /tmp $HELM_DOCS_URL/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.deb
-          sudo apt-get -y install jq /tmp/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.deb
-          npm install @octokit/request
+          sudo apt-get -y install /tmp/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.deb
       - name: Update documentation
         id: update
-        run: |
-          git config user.email '${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com'
-          git config user.name '${{ github.actor }}'
-          git fetch
-          git switch ${{ github.head_ref }}
-          helm-docs --values-file=./defaults/main.yaml
-          if [ -n "$(git ls-files -om --deduplicate)" ]; then
-            echo "files=$(git ls-files -om --deduplicate | jq -Rsc 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
-          else
-            echo "files=[]" >> $GITHUB_OUTPUT
-          fi
-      - name: Commit changes
-        env:
-          GITHUB_BRANCH_NAME: ${{ github.head_ref }}
-          GITHUB_COMMIT_MESSAGE: 'docs(github-action): update documentation'
-          GITHUB_TOKEN: ${{ github.token }}
-        if: steps.update.outputs.files != '[]'
-        run: node .github/api/commit.js "${{ steps.update.outputs.files }}"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { exec } = require('@actions/exec');
+            await exec('git', ['config', 'user.email', '${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com']);
+            await exec('git', ['config', 'user.name', '${{ github.actor }}']);
+            await exec('git', ['fetch']);
+            await exec('git', ['switch', '${{ github.head_ref }}']);
+            await exec('helm-docs', ['--values-file=./defaults/main.yaml']);
+            const { context, Octokit } = require('@actions/github');
+            const github = new Octokit();
+            async function getModifiedFiles() {
+              const { data: { repository: { id } } } = await github.rest.repos.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+              });
+              const query = `
+                query($repositoryId: ID!, $headRefOid: String!) {
+                  repository(id: $repositoryId) {
+                    object(oid: $headRefOid) {
+                      ... on Commit {
+                        message
+                        tree {
+                          entries {
+                            type
+                            path
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              `;
+              const variables = { 
+                repositoryId: id, 
+                headRefOid: context.pull_request.head.sha 
+              };
+              const response = await github.graphql(query, variables);
+              const modifiedFiles = [];
+              const newFiles = [];
+              response.data.repository.object.tree.entries.forEach(entry => {
+                if (entry.type === 'blob') {
+                  modifiedFiles.push(entry.path); 
+                }
+              });
+              return { modifiedFiles, newFiles };
+            }
+            const { modifiedFiles, newFiles } = await getModifiedFiles();
+            console.log('Modified Files:', modifiedFiles);
+            console.log('New Files:', newFiles);
+            core.setOutput('modifiedFiles', JSON.stringify(modifiedFiles));
+            core.setOutput('newFiles', JSON.stringify(newFiles));
+      - name: Create commit
+        if: steps.update.outputs.modifiedFiles != '[]' || steps.update.outputs.newFiles != '[]'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { context, Octokit } = require('@actions/github');
+            const github = new Octokit();
+            const fs = require('fs');
+            const modifiedFiles = JSON.parse('${{ steps.update.outputs.modifiedFiles }}');
+            const newFiles = JSON.parse('${{ steps.update.outputs.newFiles }}');
+            commitMessage = 'docs(github-action): update documentation';
+            const commitData = {
+              message: commitMessage,
+              tree: {
+                base_tree: context.pull_request.head.sha,
+                entries: [] 
+              }
+            };
+            const filesToUpdate = [...modifiedFiles, ...newFiles]; 
+            for (const file of filesToUpdate) {
+              try {
+                const fileContent = fs.readFileSync(file, 'utf-8'); 
+                commitData.tree.entries.push({
+                  path: file,
+                  mode: '100644',
+                  type: 'blob',
+                  content: Buffer.from(fileContent).toString('base64')
+                });
+              } catch (error) {
+                console.error(`Error reading file ${file}:`, error);
+              }
+            }
+            const { data: { createCommitOnBranch: { oid } } } = await github.graphql(`
+              mutation($repositoryId: ID!, $branchName: String!, $commitData: CreateCommitOnBranchInput!) {
+                createCommitOnBranch(input: {
+                  repositoryId: $repositoryId,
+                  branchName: context.pull_request.head.ref,
+                  commitData: $commitData
+                }) {
+                  oid
+                }
+              }
+            `, { 
+              repositoryId: context.repo.repositoryId, 
+              branchName: context.pull_request.head.ref, 
+              commitData: commitData 
+            });
+            console.log(`New commit created with oid: ${oid}`);
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              head: `${context.repo.owner}:${context.pull_request.head.ref}`
+            });
 permissions:
   contents: write
