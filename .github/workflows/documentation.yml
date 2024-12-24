@@ -37,6 +37,8 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const { context, Octokit } = require('@actions/github');
+            const github = new Octokit();
             async function getModifiedFiles() {
               try {
                 const { data: { repository: { id } } } = await github.rest.repos.get({
