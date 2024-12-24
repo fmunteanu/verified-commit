@@ -1,6 +1,6 @@
-const { request } = import("@octokit/request");
-const fs = require("fs");
-const path = require("path");
+import { request } from "@octokit/request";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 (async () => {
   const filesJson = process.argv.slice(2);
@@ -50,7 +50,7 @@ const path = require("path");
     const files = JSON.parse(filesJson);
     const blobs = await Promise.all(
       files.map(async (filePath) => {
-        const content = fs.readFileSync(path.join(process.cwd(), filePath), "utf-8");
+        const content = readFileSync(join(process.cwd(), filePath), "utf-8");
         const createBlobMutation = `
           mutation ($owner: String!, $name: String!, $content: Base64String!) {
             createBlob(input: {repositoryId: "REPO_ID", content: $content, encoding: BASE64}) {
