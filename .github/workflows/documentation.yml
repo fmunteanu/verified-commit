@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
       - name: Install required packages
         env:
           HELM_DOCS_URL: https://github.com/norwoodj/helm-docs/releases/download
