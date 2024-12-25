@@ -46,7 +46,6 @@ jobs:
         with:
           github-token: ${{ github.token }}
           script: |
-            const { context } = require('@actions/github');
             console.log(`Repository id: ${context.repo.id}`);
             core.setOutput('repository_id', context.repo.id);
 
