@@ -16,7 +16,8 @@ defaults:
     shell: bash
 
 jobs:
-  get_repository_id:
+  build:
+    name: Build Documentation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -38,12 +39,10 @@ jobs:
           git switch ${{ github.head_ref }}
           helm-docs --values-file=./defaults/main.yaml
 
-      - name: Get Repository id
+      - name: Get repository id
         uses: actions/github-script@v6
         with:
           script: |
-            const { context, Octokit } = require('@actions/github');
-            const github = new Octokit();
             async function getRepositoryId() {
               const { data: { repository: { id } } } = await github.rest.repos.get({
                 owner: context.repo.owner,
