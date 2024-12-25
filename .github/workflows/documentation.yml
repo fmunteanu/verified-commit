@@ -44,7 +44,6 @@ jobs:
         id: get_repository_id
         uses: actions/github-script@v6
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             console.log(`Repository id: ${context.repo.id}`);
             core.setOutput('repository_id', context.repo.id);
