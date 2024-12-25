@@ -44,7 +44,7 @@ jobs:
         with:
           script: |
             const fetchRepositoryId = async () => {
-              const graphqlWithAuth = graphql.defaults({
+              const graphqlWithAuth = github.defaults({
                 headers: {
                   authorization: `Bearer ${{ github.token }}`
                 }
