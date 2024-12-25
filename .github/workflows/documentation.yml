@@ -44,11 +44,16 @@ jobs:
         with:
           script: |
             async function getRepositoryId() {
-              const { data: { repository: { id } } } = await github.rest.repos.get({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-              });
-              return id;
+              try {
+                const { data: { repository: { id } } } = await github.rest.repos.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                });
+                return id;
+              } catch (error) {
+                console.error('Error fetching repository data:', error);
+                return null; 
+              }
             }
             const repositoryId = await getRepositoryId();
             console.log(`Repository ID: ${repositoryId}`);
