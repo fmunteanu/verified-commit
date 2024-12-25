@@ -1,8 +1,5 @@
 name: Update Documentation
 
-permissions:
-  contents: write
-
 on:
   pull_request:
     paths:
@@ -49,6 +46,9 @@ jobs:
           script: |
             async function getModifiedFiles() {
               try {
+                const graphqlWithAuth = graphql.defaults({
+                  headers: { authorization: `Bearer ${{ github.token }}` }
+                });
                 const { data: { repository: { id } } } = await github.rest.repos.get({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
@@ -104,3 +104,6 @@ jobs:
         run: |
           echo "New Files:"
           echo "${{ steps.update.outputs.newFiles }}" 
+
+permissions:
+  contents: write
