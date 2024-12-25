@@ -30,6 +30,7 @@ jobs:
         run: |
           sudo wget -qP /tmp $HELM_DOCS_URL/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.deb
           sudo apt-get -y install /tmp/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.deb
+          npm install graphql graphql-request
 
       - name: Update documentation
         run: |
@@ -38,6 +39,16 @@ jobs:
           git fetch
           git switch ${{ github.head_ref }}
           helm-docs --values-file=./defaults/main.yaml
+
+      - name: Get repository id
+        id: get_repository_id
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const { context } = require('@actions/github');
+            console.log(`Repository id: ${context.repo.id}`);
+            core.setOutput('repository_id', context.repo.id);
 
       - name: Get modified files
         id: files
