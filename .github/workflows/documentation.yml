@@ -43,8 +43,9 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const { graphql } = require("@octokit/graphql");
             const fetchRepositoryId = async () => {
-              const graphqlWithAuth = github.defaults({
+              const graphqlWithAuth = graphql.defaults({
                 headers: {
                   authorization: `Bearer ${{ github.token }}`
                 }
