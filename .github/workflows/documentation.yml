@@ -43,20 +43,36 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            async function getRepositoryId(owner, repo) {
+            const fetchRepositoryId = async () => {
+              const graphqlWithAuth = graphql.defaults({
+                headers: {
+                  authorization: `Bearer ${{ github.token }}`
+                }
+              });
+              const query = `
+                query($owner: String!, $name: String!) {
+                  repository(owner: $owner, name: $name) {
+                    id
+                  }
+                }
+              `;
+              const variables = {
+                owner: context.repo.owner,
+                name: context.repo.repo
+              };
               try {
-                const { data: { repository: { id } } } = await github.rest.repos.get({
-                  owner: owner,
-                  repo: repo,
-                });
-                return id;
+                const response = await graphqlWithAuth(query, variables);
+                return response.repository.id;
               } catch (error) {
-                console.error(`Error fetching repository data for ${owner}/${repo}:`, error);
-                return null; 
+                throw new Error(`Failed to fetch repository ID: ${error.message}`);
               }
-            }
-            const owner = process.env.GITHUB_REPOSITORY.split("/")[0];
-            const repo = process.env.GITHUB_REPOSITORY.split("/")[1];
-            const repositoryId = await getRepositoryId(owner, repo);
-            console.log(`Repository ID for ${owner}/${repo}: ${repositoryId}`);
-            core.setOutput('repositoryId', repositoryId);
+            };
+            (async () => {
+              try {
+                const repositoryId = await fetchRepositoryId();
+                console.log(`Repository ID: ${repositoryId}`);
+                core.setOutput("repository_id", repositoryId);
+              } catch (error) {
+                core.setFailed(error.message);
+              }
+            })();
