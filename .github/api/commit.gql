@@ -1,23 +1,49 @@
-mutation (
-  $repository: String!,
-  $branchName: String!,
-  $oid: GitObjectID!,
-  $message: String!,
-  $fileChanges: FileChanges!
-) {
-  createCommitOnBranch(input: {
-    branch: {
-      repositoryNameWithOwner: $repository,
-      branchName: $branchName,
-    },
-    expectedHeadOid: $oid,
-    message: {
-      headline: $message
-    },
-    fileChanges: $fileChanges
-  }) {
-    commit {
+const { context, Octokit } = require('@actions/github');
+const github = new Octokit();
+const fs = require('fs');
+const modifiedFiles = JSON.parse('${{ steps.update.outputs.modifiedFiles }}');
+const newFiles = JSON.parse('${{ steps.update.outputs.newFiles }}');
+commitMessage = 'docs(github-action): update documentation';
+const commitData = {
+  message: commitMessage,
+  tree: {
+    base_tree: context.pull_request.head.sha,
+    entries: [] 
+  }
+};
+const filesToUpdate = [...modifiedFiles, ...newFiles]; 
+for (const file of filesToUpdate) {
+  try {
+    const fileContent = fs.readFileSync(file, 'utf-8'); 
+    commitData.tree.entries.push({
+      path: file,
+      mode: '100644',
+      type: 'blob',
+      content: Buffer.from(fileContent).toString('base64')
+    });
+  } catch (error) {
+    console.error(`Error reading file ${file}:`, error);
+  }
+}
+const { data: { createCommitOnBranch: { oid } } } = await github.graphql(`
+  mutation($repositoryId: ID!, $branchName: String!, $commitData: CreateCommitOnBranchInput!) {
+    createCommitOnBranch(input: {
+      repositoryId: $repositoryId,
+      branchName: context.pull_request.head.ref, // Use PR head branch name
+      commitData: $commitData
+    }) {
       oid
     }
   }
-}
+`, { 
+  repositoryId: context.repo.repositoryId, 
+  branchName: context.pull_request.head.ref, 
+  commitData: commitData 
+});
+console.log(`New commit created with oid: ${oid}`);
+await github.rest.pulls.update({
+  owner: context.repo.owner,
+  repo: context.repo.repo,
+  pull_number: context.issue.number,
+  head: `${context.repo.owner}:${context.pull_request.head.ref}`, // Update head ref
+});

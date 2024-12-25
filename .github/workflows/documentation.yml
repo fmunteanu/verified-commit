@@ -1,0 +1,105 @@
+name: Update Documentation
+
+on:
+  pull_request:
+    paths:
+      - 'roles/*/defaults/main.yaml'
+      - 'roles/*/Chart.yaml'
+      - 'roles/*/README.md.gotmpl'
+
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install package
+        env:
+          HELM_DOCS_URL: https://github.com/norwoodj/helm-docs/releases/download
+          HELM_DOCS_VERSION: 1.14.2
+        run: |
+          sudo wget -qP /tmp $HELM_DOCS_URL/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.deb
+          sudo apt-get -y install /tmp/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.deb
+          npm install graphql graphql-request
+
+      - name: Update documentation
+        run: |
+          git config user.email '${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com'
+          git config user.name '${{ github.actor }}'
+          git fetch
+          git switch ${{ github.head_ref }}
+          helm-docs --values-file=./defaults/main.yaml
+
+      - name: Get repository id
+        id: get_repository_id
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log(`Repository id: ${context.repo.id}`);
+            core.setOutput('repository_id', context.repo.id);
+
+      - name: Get modified files
+        id: files
+        uses: actions/github-script@v7
+        with:
+          script: |
+            async function getModifiedFiles() {
+              try {
+                const { data: { repository: { id } } } = await github.rest.repos.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                });
+                const query = `
+                  query($repositoryId: ID!, $headRefOid: String!) {
+                    repository(id: $repositoryId) {
+                      object(oid: $headRefOid) {
+                        ... on Commit {
+                          message
+                          tree {
+                            entries {
+                              type
+                              path
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                `;
+                const variables = {
+                  repositoryId: id, 
+                  headRefOid: context.pull_request.head.sha 
+                };
+                const response = await octokit.graphql(query, variables);
+                const modifiedFiles = [];
+                const newFiles = [];
+                response.data.repository.object.tree.entries.forEach(entry => {
+                  if (entry.type === 'blob') {
+                    modifiedFiles.push(entry.path); 
+                  }
+                });
+                return { modifiedFiles, newFiles };
+              } catch (error) {
+                console.error('Error fetching repository data:', error);
+                return { modifiedFiles: [], newFiles: [] };
+              }
+            }
+            const { modifiedFiles, newFiles } = await getModifiedFiles();
+            console.log('Modified Files:', modifiedFiles);
+            console.log('New Files:', newFiles);
+            core.setOutput('modifiedFiles', JSON.stringify(modifiedFiles));
+            core.setOutput('newFiles', JSON.stringify(newFiles));
+
+permissions:
+  contents: read
+  pull-requests: write
