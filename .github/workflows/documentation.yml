@@ -30,7 +30,6 @@ jobs:
         run: |
           sudo wget -qP /tmp $HELM_DOCS_URL/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.deb
           sudo apt-get -y install /tmp/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.deb
-          npm install @octokit/request
 
       - name: Update documentation
         run: |
@@ -45,7 +44,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { context, Octokit } = require('@actions/github');
+            const { context } = require('@actions/github');
             const octokit = new Octokit({ auth: context.token });
             async function getModifiedFiles() {
               try {
