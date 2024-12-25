@@ -46,8 +46,7 @@ jobs:
         with:
           script: |
             const { context, Octokit } = require('@actions/github');
-            const { request } = require('@octokit/request');
-            const octokit = new Octokit({ request: request }); 
+            const octokit = new Octokit({ auth: context.token });
             async function getModifiedFiles() {
               try {
                 const { data: { repository: { id } } } = await octokit.rest.repos.get({
