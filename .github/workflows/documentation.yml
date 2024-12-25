@@ -40,7 +40,7 @@ jobs:
           helm-docs --values-file=./defaults/main.yaml
 
       - name: Get repository id
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             async function getRepositoryId() {
