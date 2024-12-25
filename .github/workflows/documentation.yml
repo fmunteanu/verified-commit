@@ -42,7 +42,7 @@ jobs:
 
       - name: Get repository id
         id: get_repository_id
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             console.log(`Repository id: ${context.repo.id}`);
