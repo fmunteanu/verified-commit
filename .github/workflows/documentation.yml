@@ -1,7 +1,19 @@
-name: Get Repository ID
+name: Update Documentation
 
 on:
-  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'roles/*/defaults/main.yaml'
+      - 'roles/*/Chart.yaml'
+      - 'roles/*/README.md.gotmpl'
+
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   get_repository_id:
@@ -10,7 +22,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Get Repository ID
+      - name: Install package
+        env:
+          HELM_DOCS_URL: https://github.com/norwoodj/helm-docs/releases/download
+          HELM_DOCS_VERSION: 1.14.2
+        run: |
+          sudo wget -qP /tmp $HELM_DOCS_URL/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.deb
+          sudo apt-get -y install /tmp/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.deb
+
+      - name: Update documentation
+        run: |
+          git config user.email '${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com'
+          git config user.name '${{ github.actor }}'
+          git fetch
+          git switch ${{ github.head_ref }}
+          helm-docs --values-file=./defaults/main.yaml
+
+      - name: Get Repository id
         uses: actions/github-script@v6
         with:
           script: |
